@@ -1,0 +1,179 @@
+> # clear global enviroment
+> 
+> rm(list = ls())
+> 
+> # Donload the packages
+> 
+> library(lattice)
+> library(ggplot2)
+> library(caret)
+> library(rpart)
+> library(rpart.plot)
+> library(RColorBrewer)
+> library(rattle)
+> library(randomForest)
+> 
+> # Downloand the required data in CVS format
+> 
+> # Download data
+> 
+> download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',"training.csv", quiet=FALSE)
+trying URL 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
+Content type 'text/csv' length 12202745 bytes (11.6 MB)
+downloaded 11.6 MB
+
+> 
+> download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',"testing.csv", quiet=FALSE)
+trying URL 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
+Content type 'text/csv' length 15113 bytes (14 KB)
+downloaded 14 KB
+
+> 
+> # Read data 
+> 
+> train_data<- read.csv("training.csv")
+> 
+> test_data<- read.csv("testing.csv")
+> 
+> # Review and clean the data
+> 
+> view(test_data)
+> view(test_data)
+> 
+> # clean the data by a) removing NA, "", #DIV/0!, b) removing Variables near to zero and
+> # removing Non-numerical variables
+> 
+> # Removing NA
+> 
+> train_data <- read.csv('training.csv', na.strings = c("NA", "#DIV/0!", ""))
+> test_data <-  read.csv('testing.csv', na.strings = c("NA", "#DIV/0!", ""))
+> 
+> # nearZeroVar diagnoses predictors that have one unique value 
+> # (i.e. are zero variance predictors) or predictors that are have both of
+> # the following characteristics: they have very few unique values relative 
+> # to the number of samples and the ratio of the frequency of the most common
+> # value to the frequency of the second most common value is large.
+> 
+> 
+> nzvalue <- nearZeroVar(train_data)
+> train_data <- train_data[,-nzvalue]
+> test_data <- test_data[,-nzvalue]
+> 
+> 
+> rm_na <- sapply(train_data, function(x) mean(is.na(x))) > 0.95
+> train_data <- train_data[,rm_na == FALSE]
+> test_data <- test_data[,rm_na == FALSE]
+> train_data<- train_data[, -c(1:7)]
+> test_data<- test_data[, -c(1:7)]
+> 
+> 
+> # A series of test/training partitions are created using createDataPartition 
+> # The training data is divided into two sets. This first is a training set 
+> # with 70% of the data which is used to train the model. 
+> 
+> 
+> Part.Train <- createDataPartition(train_data$classe, p=0.70)[[1]]
+> train_data <- train_data[Part.Train,]
+> Part_Test_Data <- train_data[-Part.Train,]
+> 
+> 
+> # Prediction algorithm
+> # ?train , ?rpart
+> 
+> # I use and compare recursive partitioning models - Decision tree and random forest.
+> 
+> 
+> MyModel <- train(classe ~., method='rpart', data=train_data)
+> 
+> # Prediction - Decision Tree Model
+> 
+> MyPrediction <- predict(MyModel, Part_Test_Data)
+> 
+> # Confusion Matrix
+> 
+> confusionMatrix(Part_Test_Data$classe, MyPrediction)
+Confusion Matrix and Statistics
+
+          Reference
+Prediction   A   B   C   D   E
+         A 942  27 124  83   0
+         B 168 356 130 129   0
+         C  32  29 516 141   5
+         D  60  47 157 402   0
+         E  39 161 164  70 338
+
+Overall Statistics
+                                          
+               Accuracy : 0.6199          
+                 95% CI : (0.6049, 0.6348)
+    No Information Rate : 0.3012          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.5195          
+                                          
+ Mcnemar's Test P-Value : < 2.2e-16       
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.7591  0.57419   0.4730  0.48727  0.98542
+Specificity            0.9187  0.87800   0.9317  0.91988  0.88509
+Pos Pred Value         0.8010  0.45466   0.7137  0.60360  0.43782
+Neg Pred Value         0.8984  0.92089   0.8307  0.87753  0.99851
+Prevalence             0.3012  0.15049   0.2648  0.20024  0.08325
+Detection Rate         0.2286  0.08641   0.1252  0.09757  0.08204
+Detection Prevalence   0.2854  0.19005   0.1755  0.16165  0.18738
+Balanced Accuracy      0.8389  0.72610   0.7023  0.70358  0.93526
+> 
+> # Random Forest Model
+> # ?randomForest
+> 
+> # Model
+> MyR_Model <- train(classe ~., method='rf', data=train_data, ntree=10)
+> 
+> # Random Forest Prediction 
+> 
+> My_RF_Predict <- predict(MyR_Model,Part_Test_Data)
+> 
+> # Confusion Matrix
+> 
+> confusionMatrix(Part_Test_Data$classe,My_RF_Predict)
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1176    0    0    0    0
+         B    1  782    0    0    0
+         C    0    0  722    1    0
+         D    0    0    1  665    0
+         E    0    0    0    0  772
+
+Overall Statistics
+                                          
+               Accuracy : 0.9993          
+                 95% CI : (0.9979, 0.9998)
+    No Information Rate : 0.2857          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.9991          
+                                          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9992   1.0000   0.9986   0.9985   1.0000
+Specificity            1.0000   0.9997   0.9997   0.9997   1.0000
+Pos Pred Value         1.0000   0.9987   0.9986   0.9985   1.0000
+Neg Pred Value         0.9997   1.0000   0.9997   0.9997   1.0000
+Prevalence             0.2857   0.1898   0.1755   0.1617   0.1874
+Detection Rate         0.2854   0.1898   0.1752   0.1614   0.1874
+Detection Prevalence   0.2854   0.1900   0.1755   0.1617   0.1874
+Balanced Accuracy      0.9996   0.9999   0.9992   0.9991   1.0000
+> 
+> # Final conclusion - We predict with test data
+> 
+> 
+> predict(MyR_Model, test_data)
+ [1] B A B A A C D B A A B C B A E E A B B B
+Levels: A B C D E
