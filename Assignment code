@@ -1,0 +1,105 @@
+# clear global enviroment
+
+rm(list = ls())
+
+# Donload the packages
+
+library(lattice)
+library(ggplot2)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+
+# Downloand the required data in CVS format
+
+# Download data
+
+download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv',"training.csv", quiet=FALSE)
+
+download.file('https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv',"testing.csv", quiet=FALSE)
+
+# Read data 
+
+train_data<- read.csv("training.csv")
+
+test_data<- read.csv("testing.csv")
+
+# Review and clean the data
+
+view(test_data)
+view(test_data)
+
+# clean the data by a) removing NA, "", #DIV/0!, b) removing Variables near to zero and
+# removing Non-numerical variables
+
+# Removing NA
+
+train_data <- read.csv('training.csv', na.strings = c("NA", "#DIV/0!", ""))
+test_data <-  read.csv('testing.csv', na.strings = c("NA", "#DIV/0!", ""))
+
+# nearZeroVar diagnoses predictors that have one unique value 
+# (i.e. are zero variance predictors) or predictors that are have both of
+# the following characteristics: they have very few unique values relative 
+# to the number of samples and the ratio of the frequency of the most common
+# value to the frequency of the second most common value is large.
+
+
+nzvalue <- nearZeroVar(train_data)
+train_data <- train_data[,-nzvalue]
+test_data <- test_data[,-nzvalue]
+
+
+rm_na <- sapply(train_data, function(x) mean(is.na(x))) > 0.95
+train_data <- train_data[,rm_na == FALSE]
+test_data <- test_data[,rm_na == FALSE]
+train_data<- train_data[, -c(1:7)]
+test_data<- test_data[, -c(1:7)]
+
+
+# A series of test/training partitions are created using createDataPartition 
+# The training data is divided into two sets. This first is a training set 
+# with 70% of the data which is used to train the model. 
+
+
+Part.Train <- createDataPartition(train_data$classe, p=0.70)[[1]]
+train_data <- train_data[Part.Train,]
+Part_Test_Data <- train_data[-Part.Train,]
+
+
+# Prediction algorithm
+# ?train , ?rpart
+
+# I use and compare recursive partitioning models - Decision tree and random forest.
+
+
+MyModel <- train(classe ~., method='rpart', data=train_data)
+
+# Prediction - Decision Tree Model
+
+MyPrediction <- predict(MyModel, Part_Test_Data)
+
+# Confusion Matrix
+
+confusionMatrix(Part_Test_Data$classe, MyPrediction)
+
+# Random Forest Model
+# ?randomForest
+
+# Model
+MyR_Model <- train(classe ~., method='rf', data=train_data, ntree=10)
+
+# Random Forest Prediction 
+
+My_RF_Predict <- predict(MyR_Model,Part_Test_Data)
+
+# Confusion Matrix
+
+confusionMatrix(Part_Test_Data$classe,My_RF_Predict)
+
+# Final conclusion - We predict with test data
+
+
+predict(MyR_Model, test_data)
